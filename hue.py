@@ -12,9 +12,8 @@ from dateutil import parser
 
 import json
 import time
-
-autumn_chill                    = 'spotify:user:mariokristian:playlist:7G8qKmsQOGyguhiEo2o8bl'
-motion_sensor_name              = 'Hue motion sensor 1'
+import playlist
+motion_sensor_name              = 'Hall motion sensor'
 sonos_speaker_name              = 'PlaybarVardagrum'
 motion_sensor_min_diff_seconds  = 10 # 60 * 60 * 2 # 2 hours
 username                        = 'pgq82ZreITIUSmNSpaerNDJ3pH1emTi3R-65g-CU'
@@ -61,8 +60,10 @@ def coming_home():
     sonos.partymode()
     sonos.clear_queue()
     sonos.stop()
-    add_from_service(autumn_chill, service, sonos, False)
-    sonos.play()
+    chosen_playlist = playlist.choose()
+    if chosen_playlist is not None:
+        add_from_service(chosen_playlist, service, sonos, False)
+        sonos.play()
 
 def nupnp():
     response = requests.get('https://www.meethue.com/api/nupnp');
@@ -110,7 +111,7 @@ def turn_on(bridge_ip, username):
 
 def motion(bridge_ip, username):
     last_state = False
-    last_updated = None
+    previous_state_change = datetime.datetime.now()
     while True:
         r = clip('GET', bridge_ip, 'api/' + username + '/sensors')
         if (len(r) == 1):
@@ -118,18 +119,18 @@ def motion(bridge_ip, username):
                 print("ERROR")
         for key in r:
             if (r[key]["name"] == motion_sensor_name):
-                new_lastupdated = parser.parse(r[key]["state"]["lastupdated"])
+                state_change = parser.parse(r[key]["state"]["lastupdated"])
                 new_state = r[key]["state"]["presence"]
                 if (new_state != last_state):
-                    if (last_updated != None):
-                        diff = new_lastupdated - last_updated
-                        if (diff.total_seconds() > motion_sensor_min_diff_seconds and new_state == True):
-                            print("Coming home!")
-                            turn_on(bridge_ip, username)
-                            coming_home()
+                    print("New state for motion sensor", last_state, " -> ", new_state)
+                    diff = state_change - previous_state_change
+                    print("Diff is now", diff.total_seconds(), ">", motion_sensor_min_diff_seconds)
+                    if (diff.total_seconds() > motion_sensor_min_diff_seconds and new_state == True):
+                        print("Coming home!")
+                        turn_on(bridge_ip, username)
+                        coming_home()
                     last_state = r[key]["state"]["presence"]
-                if (last_updated != new_lastupdated):
-                    last_updated = new_lastupdated
+                    previous_state_change = state_change
         time.sleep(1)
 
 bridge_ip = nupnp()
