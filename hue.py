@@ -15,7 +15,7 @@ import time
 import playlist
 motion_sensor_name              = 'Hall motion sensor'
 sonos_speaker_name              = 'PlaybarVardagrum'
-motion_sensor_min_diff_seconds  = 10 # 60 * 60 * 2 # 2 hours
+motion_sensor_min_diff_seconds  = 60 * 60 * 4 # 2 hours
 username                        = 'pgq82ZreITIUSmNSpaerNDJ3pH1emTi3R-65g-CU'
 
 def add_from_service(item_id, service, device, is_track=True):
@@ -127,10 +127,11 @@ def motion(bridge_ip, username):
                     print("Diff is now", diff.total_seconds(), ">", motion_sensor_min_diff_seconds)
                     if (diff.total_seconds() > motion_sensor_min_diff_seconds and new_state == True):
                         print("Coming home!")
+                        previous_state_change = state_change
                         turn_on(bridge_ip, username)
                         coming_home()
                     last_state = r[key]["state"]["presence"]
-                    previous_state_change = state_change
+
         time.sleep(1)
 
 bridge_ip = nupnp()
