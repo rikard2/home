@@ -1,0 +1,16 @@
+#!/bin/bash
+
+USER={{ user }}
+LOCALPORT={{ port }}
+
+CHECKPORT=$(lsof -i :$LOCALPORT)
+if [ -z "$CHECKPORT" ]; then
+    echo "Logging in to tunnel.trustly.com"
+    ssh -o ServerAliveInterval=60 -p 2200 -l "$USER" tunnel.trustly.com -L $LOCALPORT:10.1.1.7:5432 -L 4410:10.2.1.10:443 -f -N
+    if [ $? -ne 0 ]; then
+        echo "failed, exiting"
+        exit 1
+    fi
+fi
+
+exit 0

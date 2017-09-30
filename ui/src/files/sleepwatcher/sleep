@@ -1,0 +1,3 @@
+#!/bin/sh
+/usr/local/MacGPG2/bin/gpg-connect-agent "scd reset" /bye > /dev/null 2>&1
+

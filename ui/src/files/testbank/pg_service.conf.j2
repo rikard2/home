@@ -1,0 +1,13 @@
+[bank-worker]
+port={{ bank_worker_port }}
+user={{ bank_worker_user }}
+dbname=bank
+options=-c client_min_messages=ERROR
+client_encoding=UTF8
+
+[trustly-worker]
+port={{ trustly_worker_port }}
+user={{ trustly_worker_user }}
+dbname={{ trustly_db }}
+options=-c client_min_messages=ERROR
+client_encoding=UTF8
