@@ -120,7 +120,7 @@ def motion(bridge_ip, username):
                 print("ERROR")
         for key in r:
             if (r[key]["name"] == motion_sensor_name):
-                state_change = parser.parse(r[key]["state"]["lastupdated"])
+                state_change = parser.parse(r[key]["state"]["lastupdated"]).replace(tzinfo=stockholmtz)
                 new_state = r[key]["state"]["presence"]
                 if (new_state != last_state):
                     print("New state for motion sensor", last_state, " -> ", new_state)
