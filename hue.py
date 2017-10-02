@@ -10,13 +10,14 @@ from soco.music_services import MusicService
 from soco.compat import quote_url
 from dateutil import parser
 
-import json
-import time
+import json, time, pytz
 import playlist
 motion_sensor_name              = 'Hall motion sensor'
 sonos_speaker_name              = 'PlaybarVardagrum'
 motion_sensor_min_diff_seconds  = 60 * 60 * 4 # 2 hours
 username                        = 'pgq82ZreITIUSmNSpaerNDJ3pH1emTi3R-65g-CU'
+
+stockholmtz = pytz.timezone('Europe/Stockholm')
 
 def add_from_service(item_id, service, device, is_track=True):
 
@@ -111,7 +112,7 @@ def turn_on(bridge_ip, username):
 
 def motion(bridge_ip, username):
     last_state = False
-    previous_state_change = datetime.datetime.now()
+    previous_state_change = datetime.datetime.now(stockholmtz)
     while True:
         r = clip('GET', bridge_ip, 'api/' + username + '/sensors')
         if (len(r) == 1):

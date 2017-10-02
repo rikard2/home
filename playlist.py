@@ -1,10 +1,12 @@
-import datetime
+import datetime, pytz
 
 autumn_chill                    = 'spotify:user:mariokristian:playlist:7G8qKmsQOGyguhiEo2o8bl'
 sleep_tight                     = 'spotify:user:spotify:playlist:37i9dQZF1DWZd79rJ6a7lp'
 house                           = 'spotify:user:mejoresplaylistsspotify:playlist:2DZvLW8oBFRLa2c1uju3oy'
 
-def choose(hour = datetime.datetime.now().hour, weekday = datetime.datetime.now().isoweekday()):
+stockholmtz = pytz.timezone('Europe/Stockholm')
+
+def choose(hour = datetime.datetime.now(stockholmtz).hour, weekday = datetime.datetime.now(stockholmtz).isoweekday()):
     print(hour, weekday)
     if 5 <= weekday <= 6 and 19 <= hour < 22:
         print("Party!")
