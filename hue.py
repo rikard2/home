@@ -141,5 +141,5 @@ def motion(bridge_ip, username):
 
 #bridge_ip = nupnp()
 # username = connect(bridge_ip)
-turn_on_light('ricksplace.zapto.org:12222', username)
-#motion('ricksplace.zapto.org:12222', username)
+#turn_on_light('ricksplace.zapto.org:12222', username)
+motion('ricksplace.zapto.org:12222', username)
