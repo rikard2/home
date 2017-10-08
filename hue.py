@@ -3,21 +3,21 @@
 
 import requests
 import soco
-import datetime
+from datetime import datetime, timedelta
 from soco import SoCo
 from soco.data_structures import DidlItem, DidlResource
 from soco.music_services import MusicService
 from soco.compat import quote_url
 from dateutil import parser
 
-import json, time, pytz
+import json, time, re
 import playlist
 motion_sensor_name              = 'Hall motion sensor'
 sonos_speaker_name              = 'PlaybarVardagrum'
-motion_sensor_min_diff_seconds  = 60 * 60 * 4 # 2 hours
+motion_sensor_min_diff_seconds  = 30 # 60 * 60 * 4 # 2 hours
 username                        = 'pgq82ZreITIUSmNSpaerNDJ3pH1emTi3R-65g-CU'
-
-stockholmtz = pytz.timezone('Europe/Stockholm')
+speakers_volume                 = 20
+scene_id                        = '33300ac17-on-0'
 
 def add_from_service(item_id, service, device, is_track=True):
 
@@ -49,6 +49,7 @@ def coming_home():
         return
     speaker = None
     for s in speakers:
+        s.volume = speakers_volume
         if (s.player_name == sonos_speaker_name):
             speaker = s
     if (speaker == None):
@@ -105,14 +106,15 @@ def connect(bridge_ip):
             print("wtf?")
         time.sleep(1)
 
-def turn_on(bridge_ip, username):
-    action = {"on":True,"bri":255,"sat":255,"hue":0}
-    action = { "scene": "yzgwmzWucuTJcyX" }
-    r = clip('PUT', bridge_ip, 'api/' + username + '/groups/6/action', action)
+def turn_on_light(bridge_ip, username):
+    #action = {"on":True,"bri":255,"sat":255,"hue":0}
+    action = { "scene": scene_id }
+    r = clip('PUT', bridge_ip, 'api/' + username + '/groups/8/action', action)
 
 def motion(bridge_ip, username):
     last_state = False
-    previous_state_change = datetime.datetime.now(stockholmtz)
+    previous_state_change = datetime.utcnow() + timedelta(hours=2)
+
     while True:
         r = clip('GET', bridge_ip, 'api/' + username + '/sensors')
         if (len(r) == 1):
@@ -120,22 +122,24 @@ def motion(bridge_ip, username):
                 print("ERROR")
         for key in r:
             if (r[key]["name"] == motion_sensor_name):
-                state_change = parser.parse(r[key]["state"]["lastupdated"]).replace(tzinfo=stockholmtz)
+                (year, month, day, hour, minute, second) = re.search('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})', r[key]["state"]["lastupdated"]).groups()
+                state_change = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second)) + timedelta(hours=2)
                 new_state = r[key]["state"]["presence"]
+                diff = state_change - previous_state_change
                 if (new_state != last_state):
-                    print("New state for motion sensor", last_state, " -> ", new_state)
-                    diff = state_change - previous_state_change
-                    print("Diff is now", diff.total_seconds(), ">", motion_sensor_min_diff_seconds)
-                    if (diff.total_seconds() > motion_sensor_min_diff_seconds and new_state == True):
-                        print("Coming home!")
-                        previous_state_change = state_change
-                        turn_on(bridge_ip, username)
-                        coming_home()
+                    if new_state == True:
+                        print("Motion sensor triggered, diff is {} seconds.".format(round(diff.total_seconds(), 0)))
+                        print("Am I coming home? {} > {}".format(round(diff.total_seconds(), 0), motion_sensor_min_diff_seconds))
+                        if int(diff.total_seconds()) > motion_sensor_min_diff_seconds:
+                            print("Coming home!")
+                            previous_state_change = state_change
+                            turn_on_light(bridge_ip, username)
+                            coming_home()
                     last_state = r[key]["state"]["presence"]
 
         time.sleep(1)
 
-bridge_ip = nupnp()
+#bridge_ip = nupnp()
 # username = connect(bridge_ip)
-motion(bridge_ip, username)
-#coming_home()
+turn_on_light('ricksplace.zapto.org:12222', username)
+#motion('ricksplace.zapto.org:12222', username)
