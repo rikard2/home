@@ -14,7 +14,7 @@ import json, time, re
 import playlist
 motion_sensor_name              = 'Hall motion sensor'
 sonos_speaker_name              = 'PlaybarVardagrum'
-motion_sensor_min_diff_seconds  = 30 # 60 * 60 * 4 # 2 hours
+motion_sensor_min_diff_seconds  = 60 * 60 * 4 # 2 hours
 username                        = 'pgq82ZreITIUSmNSpaerNDJ3pH1emTi3R-65g-CU'
 speakers_volume                 = 20
 scene_id                        = '33300ac17-on-0'
