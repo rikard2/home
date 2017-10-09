@@ -10,9 +10,11 @@ from soco.data_structures import DidlItem, DidlResource
 from soco.music_services import MusicService
 from soco.compat import quote_url
 from dateutil import parser
-
 import json, time, re
 import playlist
+import argparse
+
+default_bridge                  = 'ricksplace.zapto.org:12222'
 motion_sensor_name              = 'Hall motion sensor'
 sonos_speaker_name              = 'PlaybarVardagrum'
 motion_sensor_min_diff_seconds  = 60 # 60 * 60 * 4 # 2 hours
@@ -150,7 +152,24 @@ def motion(bridge_ip, username):
             err('Exception: {} in file {} on line {}'.format(e.message, fname, exc_tb.tb_lineno))
         time.sleep(1)
 
-#bridge_ip = nupnp()
-# username = connect(bridge_ip)
-#turn_on_light('ricksplace.zapto.org:12222', username)
-motion('ricksplace.zapto.org:12222', username)
+parser = argparse.ArgumentParser(description='Come home to a nice place')
+parser.add_argument('--test-sonos', action="store_true", help='Test playing the active playlist with sonos')
+parser.add_argument('--test-hue', action="store_true", help='Test setting the coming home lightr')
+parser.add_argument('--username', type=str, default=username, help='Set the HUE API Key')
+parser.add_argument('--bridge', type=str, default=default_bridge)
+parser.add_argument('--find-bridge', action="store_true", help='Try to find the bridge')
+parser.add_argument('--passive', action="store_true", help='Dont wait for motion events')
+
+args = parser.parse_args()
+bridge = args.bridge
+username = args.username
+
+if args.find_bridge:
+    bridge = nupnp()
+    print("Found bridge...", bridge)
+if args.test_sonos:
+    coming_home()
+if args.test_hue:
+    turn_on_light(bridge, username)
+if not args.passive:
+    motion('ricksplace.zapto.org:12222', username)
