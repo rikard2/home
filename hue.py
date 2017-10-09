@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import requests
+import sys, os
 import soco
 from datetime import datetime, timedelta
 from soco import SoCo
@@ -14,10 +15,15 @@ import json, time, re
 import playlist
 motion_sensor_name              = 'Hall motion sensor'
 sonos_speaker_name              = 'PlaybarVardagrum'
-motion_sensor_min_diff_seconds  = 60 * 60 * 4 # 2 hours
+motion_sensor_min_diff_seconds  = 60 # 60 * 60 * 4 # 2 hours
 username                        = 'pgq82ZreITIUSmNSpaerNDJ3pH1emTi3R-65g-CU'
 speakers_volume                 = 20
 scene_id                        = '33300ac17-on-0'
+
+def log(str):
+    sys.stdout.write(str + '\n')
+def err(str):
+    sys.stderr.write(str + '\n')
 
 def add_from_service(item_id, service, device, is_track=True):
 
@@ -45,7 +51,7 @@ def add_from_service(item_id, service, device, is_track=True):
 def coming_home():
     speakers = soco.discover()
     if (speakers == None):
-        print("Couldn't discover sonos speakers...")
+        log("Couldn't discover sonos speakers...")
         return
     speaker = None
     for s in speakers:
@@ -53,10 +59,10 @@ def coming_home():
         if (s.player_name == sonos_speaker_name):
             speaker = s
     if (speaker == None):
-        print("Couldn't discover sonos speakers...")
+        log("Couldn't discover sonos speakers...")
         return
     sonos = SoCo(speaker.ip_address)
-    print("Found Sonos Speaker " + speaker.player_name)
+    log("Found Sonos Speaker " + speaker.player_name)
     service = MusicService("Spotify")
     sonos.play_mode = 'SHUFFLE'
     sonos.partymode()
@@ -72,7 +78,7 @@ def nupnp():
     response_json = json.loads(response.text)
 
     bridge_ip = response_json[0]['internalipaddress'];
-    print("Found HUE bridge " + bridge_ip)
+    log("Found HUE bridge " + bridge_ip)
     return bridge_ip
 
 def clip(type, bridge_ip, path, request_json = None):
@@ -97,13 +103,13 @@ def connect(bridge_ip):
 
         if ('error' in r):
             if (x == 0):
-                print("Press the button")
+                log("Press the button")
         elif ('success' in r):
             username = r['success']['username']
-            print("Found username " + username)
+            log("Found username " + username)
             return username
         else:
-            print("wtf?")
+            err("wtf?")
         time.sleep(1)
 
 def turn_on_light(bridge_ip, username):
@@ -115,28 +121,33 @@ def motion(bridge_ip, username):
     last_state = False
     previous_state_change = datetime.utcnow() + timedelta(hours=2)
 
+    log("Starting motion loop...")
     while True:
-        r = clip('GET', bridge_ip, 'api/' + username + '/sensors')
-        if (len(r) == 1):
-            if ('error' in r[0]):
-                print("ERROR")
-        for key in r:
-            if (r[key]["name"] == motion_sensor_name):
-                (year, month, day, hour, minute, second) = re.search('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})', r[key]["state"]["lastupdated"]).groups()
-                state_change = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second)) + timedelta(hours=2)
-                new_state = r[key]["state"]["presence"]
-                diff = state_change - previous_state_change
-                if (new_state != last_state):
-                    if new_state == True:
-                        print("Motion sensor triggered, diff is {} seconds.".format(round(diff.total_seconds(), 0)))
-                        print("Am I coming home? {} > {}".format(round(diff.total_seconds(), 0), motion_sensor_min_diff_seconds))
-                        if int(diff.total_seconds()) > motion_sensor_min_diff_seconds:
-                            print("Coming home!")
-                            previous_state_change = state_change
-                            turn_on_light(bridge_ip, username)
-                            coming_home()
-                    last_state = r[key]["state"]["presence"]
-
+        try:
+            r = clip('GET', bridge_ip, 'api/' + username + '/sensors')
+            if (len(r) == 1):
+                if ('error' in r[0]):
+                    err("ERROR")
+            for key in r:
+                if (r[key]["name"] == motion_sensor_name):
+                    (year, month, day, hour, minute, second) = re.search('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})', r[key]["state"]["lastupdated"]).groups()
+                    state_change = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second)) + timedelta(hours=2)
+                    new_state = r[key]["state"]["presence"]
+                    diff = state_change - previous_state_change
+                    if (new_state != last_state):
+                        if new_state == True:
+                            log("Motion sensor triggered, diff is {} seconds.".format(round(diff.total_seconds(), 0)))
+                            log("Am I coming home? {} > {}".format(round(diff.total_seconds(), 0), motion_sensor_min_diff_seconds))
+                            if int(diff.total_seconds()) > motion_sensor_min_diff_seconds:
+                                log("Coming home!")
+                                previous_state_change = state_change
+                                turn_on_light(bridge_ip, username)
+                                coming_home()
+                        last_state = r[key]["state"]["presence"]
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            err('Exception: {} in file {} on line {}'.format(e.message, fname, exc_tb.tb_lineno))
         time.sleep(1)
 
 #bridge_ip = nupnp()
